@@ -3,6 +3,7 @@ package com.shubham.mahalkar.notesappusingvolley;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.Dialog;
@@ -31,7 +32,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -39,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     Toolbar toolbar;
     RecyclerView rvDailyNotes;
     String strTitle, strDescription;
+    private RecyclerView.Adapter adapter_notes;
+    private List<ModelNotes> NoteItems;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +54,69 @@ public class MainActivity extends AppCompatActivity {
         toolbar.setTitle("Notes");
         setSupportActionBar(toolbar);
         rvDailyNotes = findViewById(R.id.rvDailyNotes);
+
+        rvDailyNotes.setHasFixedSize(true);
+        rvDailyNotes.setLayoutManager(new LinearLayoutManager(this));
+
+        getAllNotes();
+    }
+
+    private void getAllNotes() {
+        final ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Getting notes, Please Wait");
+        progressDialog.show();
+        progressDialog.setCancelable(false);
+        progressDialog.setCanceledOnTouchOutside(false);
+
+        final String fetchNotes = Utils.ipAddress + "fetch_notes.php";
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, fetchNotes,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        progressDialog.dismiss();
+                        NoteItems = new ArrayList();
+                        try {
+                            JSONArray jsonArray = new JSONArray(response);
+                            Log.d("checkResponse === ",  response);
+
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                                String resp = jsonObject.getString("status");
+                                if (resp.equals("Active")) {
+                                    ModelNotes modelNotes = new ModelNotes();
+
+                                    modelNotes.setNotesId(jsonObject.getString("notes_id"));
+                                    modelNotes.setNotesTitle(jsonObject.getString("notes_title"));
+                                    modelNotes.setNotesDescription(jsonObject.getString("notes_description"));
+
+                                    NoteItems.add(modelNotes);
+                                }else {
+                                    String message = jsonObject.getString("message");
+                                    Toast.makeText(MainActivity.this, ""+message, Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                            adapter_notes = new AdapterNotes(NoteItems, MainActivity.this);
+                            rvDailyNotes.setAdapter(adapter_notes);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        progressDialog.dismiss();
+                        Toast.makeText(getApplicationContext(), "error  " + error, Toast.LENGTH_SHORT).show();
+                    }
+                }) {
+            @Override
+            protected Map<String, String> getParams() throws AuthFailureError {
+                Map<String, String> params = new HashMap<String, String>();
+                return params;
+            }
+        };
+        VolleySingleton.getInstance(getApplicationContext()).addToRequestQueue(stringRequest);
     }
 
     @Override
@@ -61,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.addNote) {
-            Toast.makeText(this, "clicked", Toast.LENGTH_SHORT).show();
 
             final Dialog myDialog = new Dialog(MainActivity.this);
             myDialog.setContentView(R.layout.dialog_add_note);
@@ -128,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
 
                             } else {
                                 String message = jsonObject.getString("message");
-                                Toast.makeText(MainActivity.this, "error"+message, Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "error" + message, Toast.LENGTH_SHORT).show();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
