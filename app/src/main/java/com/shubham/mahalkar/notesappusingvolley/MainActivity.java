@@ -59,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-
         int id = item.getItemId();
         if (id == R.id.addNote) {
             Toast.makeText(this, "clicked", Toast.LENGTH_SHORT).show();
@@ -67,11 +66,11 @@ public class MainActivity extends AppCompatActivity {
             final Dialog myDialog = new Dialog(MainActivity.this);
             myDialog.setContentView(R.layout.dialog_add_note);
 
-            WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-            lp.copyFrom(myDialog.getWindow().getAttributes());
-            lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-            lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
-            myDialog.getWindow().setAttributes(lp);
+            WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
+            layoutParams.copyFrom(myDialog.getWindow().getAttributes());
+            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            myDialog.getWindow().setAttributes(layoutParams);
             myDialog.show();
 
             final EditText etTitle = myDialog.findViewById(R.id.etTitle);
@@ -98,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
-
         }
         return super.onOptionsItemSelected(item);
     }
@@ -110,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         progressDialog.setCanceledOnTouchOutside(false);
 
-        final String add_notes = Utils.ipAddress + "add_notes/";
+        final String add_notes = Utils.ipAddress + "add_notes.php";
         StringRequest stringRequest = new StringRequest(Request.Method.POST, add_notes,
                 new Response.Listener<String>() {
                     @Override
@@ -120,21 +118,17 @@ public class MainActivity extends AppCompatActivity {
                             JSONArray jsonArray = new JSONArray(response);
                             Log.d("checkResponse === ", response);
 
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                String resp = jsonObject.getString("status");
-                                if (resp.equals("Active")) {
-                                    strTitle = jsonObject.getString("note");
-                                    strDescription = jsonObject.getString("title");
+                            JSONObject jsonObject = jsonArray.getJSONObject(0);
+                            String resp = jsonObject.getString("status");
+                            if (resp.equals("Active")) {
+                                Toast.makeText(MainActivity.this, "Note added", Toast.LENGTH_SHORT).show();
+                                Intent in = new Intent(getApplicationContext(), MainActivity.class);
+                                startActivity(in);
+                                finish();
 
-                                    Toast.makeText(MainActivity.this, "Note added", Toast.LENGTH_SHORT).show();
-                                    Intent in = new Intent(getApplicationContext(), MainActivity.class);
-                                    startActivity(in);
-                                    finish();
-
-                                } else {
-                                    Toast.makeText(MainActivity.this, "error", Toast.LENGTH_SHORT).show();
-                                }
+                            } else {
+                                String message = jsonObject.getString("message");
+                                Toast.makeText(MainActivity.this, "error"+message, Toast.LENGTH_SHORT).show();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -151,8 +145,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> params = new HashMap<String, String>();
-                params.put("note", strTitle);
-                params.put("title", strDescription);
+                params.put("notes_title", strTitle);
+                params.put("notes_description", strDescription);
                 return params;
             }
         };
